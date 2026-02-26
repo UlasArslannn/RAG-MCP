@@ -3,6 +3,7 @@ Agent utilities - LLM, MCP client, and agent setup
 Both main.py and mcp_client.ipynb can import from here
 """
 
+import os
 from llama_index.llms.ollama import Ollama
 from llama_index.core import Settings
 from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
@@ -17,14 +18,15 @@ You are an AI assistant for Tool Calling.
 Before you help a user, you need to work with tools to interact with Our Database
 """
 
-MCP_SERVER_URL = "http://127.0.0.1:8000/sse"
-LLM_MODEL = "llama3.2"
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://127.0.0.1:8000/sse")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+LLM_MODEL = os.getenv("LLM_MODEL", "llama3.2")
 
 
 # -------------------- LLM Setup --------------------
 def get_llm():
     """Get configured LLM instance"""
-    llm = Ollama(model=LLM_MODEL, request_timeout=120)
+    llm = Ollama(model=LLM_MODEL, base_url=OLLAMA_HOST, request_timeout=120)
     Settings.llm = llm
     return llm
 

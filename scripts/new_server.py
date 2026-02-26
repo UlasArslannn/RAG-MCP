@@ -1,12 +1,16 @@
 import sqlite3
 import argparse
 import json
+import os
 from mcp.server.fastmcp import FastMCP
+
+# reviews.db'nin yolunu belirle: Docker'da DB_PATH env var, lokalde script konumuna göre
+DB_PATH = os.getenv('DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'reviews.db'))
 
 mcp = FastMCP('reviews-db')
 
 def init_db():
-    conn = sqlite3.connect('reviews.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS reviews (
