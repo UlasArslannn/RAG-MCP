@@ -1,0 +1,74 @@
+# Docker Compose for RAG-MCP
+# Usage: docker compose up
+# This starts all 3 services: MCP Server, FastAPI App, and Ollama LLM
+
+services:
+  # ─── Ollama LLM Service ───
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rag-mcp-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Ollama Model Puller (one-time init) ───
+  ollama-pull:
+    image: curlimages/curl:latest
+    container_name: rag-mcp-ollama-pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+        echo '📥 Pulling llama3.2 model...' &&
+        curl -s http://ollama:11434/api/pull -d '{\"name\": \"llama3.2\"}' &&
+        echo '✅ Model ready!'
+      "
+    restart: "no"
+
+  # ─── MCP Server (SQLite + SSE) ───
+  mcp-server:
+    build: .
+    container_name: rag-mcp-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - db_data:/app/data
+    environment:
+      - DB_PATH=/app/data/reviews.db
+    command: [ "uv", "run", "python", "scripts/new_server.py", "--server_type=sse" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/sse || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── FastAPI App (LlamaIndex Agent) ───
+  fastapi-app:
+    build: .
+    container_name: rag-mcp-fastapi
+    ports:
+      - "8001:8001"
+    environment:
+      - MCP_SERVER_URL=http://mcp-server:8000/sse
+      - OLLAMA_HOST=http://ollama:11434
+      - LLM_MODEL=llama3.2
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+      ollama-pull:
+        condition: service_completed_successfully
+    command: [ "uv", "run", "python", "scripts/main.py" ]
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+  db_data:
