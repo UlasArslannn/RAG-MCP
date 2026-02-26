@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 import uvicorn
+from typing import Any
 
 from llama_index.core.workflow import Context
 
@@ -24,6 +25,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     tool_calls: list[dict] = []
+    
 
 
 # -------------------- Global State --------------------
@@ -95,9 +97,11 @@ async def chat(request: ChatRequest):
             verbose=request.verbose
         )
         
+        
         return ChatResponse(
             response=response,
-            tool_calls=tool_calls if request.verbose else []
+            tool_calls=tool_calls if request.verbose else [],
+        
         )
         
     except Exception as e:
