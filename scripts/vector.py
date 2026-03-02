@@ -34,9 +34,10 @@ if add_documents:
         documents.append(document)
         ids.append(str(i))
 
+user_collection_name = "reviews_montagna"
 
 vector_store = Chroma(
-    collection_name="reviews_montagna",
+    collection_name=user_collection_name,
     embedding_function=embeddings,
     persist_directory=db_location
 )
